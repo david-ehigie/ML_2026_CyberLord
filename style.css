@@ -1,0 +1,184 @@
+:root {
+    --bg-color: #0f172a;
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    
+    --btn-bg: rgba(255, 255, 255, 0.05);
+    --btn-hover: rgba(255, 255, 255, 0.15);
+    --btn-active: rgba(255, 255, 255, 0.25);
+    
+    --accent-color: #ff007a;
+    --accent-glow: rgba(255, 0, 122, 0.4);
+    
+    --operator-color: #00d2ff;
+    --operator-glow: rgba(0, 210, 255, 0.4);
+    
+    --font-family: 'Outfit', sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-color);
+    font-family: var(--font-family);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    color: var(--text-primary);
+    position: relative;
+}
+
+/* Abstract Background Shapes */
+.circle {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    z-index: -1;
+    animation: float 10s infinite ease-in-out;
+}
+
+.circle-1 {
+    width: 300px;
+    height: 300px;
+    background: var(--accent-color);
+    top: 10%;
+    left: 20%;
+    opacity: 0.4;
+}
+
+.circle-2 {
+    width: 250px;
+    height: 250px;
+    background: var(--operator-color);
+    bottom: 10%;
+    right: 20%;
+    opacity: 0.4;
+    animation-delay: -5s;
+}
+
+@keyframes float {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(0, 20px); }
+}
+
+/* Calculator Container - The Glass Card */
+.calculator {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    box-shadow: var(--glass-shadow);
+    padding: 20px;
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    transition: transform 0.3s ease;
+}
+
+.calculator:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* Display Section */
+.display-container {
+    text-align: right;
+    padding: 10px 20px;
+    margin-bottom: 10px;
+    word-wrap: break-word;
+    word-break: break-all;
+}
+
+.previous-operand {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    min-height: 1.5rem;
+    margin-bottom: 5px;
+}
+
+.current-operand {
+    color: var(--text-primary);
+    font-size: 2.5rem;
+    font-weight: 600;
+}
+
+/* Buttons Grid */
+.buttons-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.btn {
+    appearance: none;
+    border: none;
+    outline: none;
+    background: var(--btn-bg);
+    color: var(--text-primary);
+    font-size: 1.25rem;
+    font-family: var(--font-family);
+    padding: 15px;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    border: 1px solid transparent;
+}
+
+.btn:hover {
+    background: var(--btn-hover);
+    border-color: var(--glass-border);
+    transform: scale(1.05);
+}
+
+.btn:active {
+    background: var(--btn-active);
+    transform: scale(0.95);
+}
+
+/* Specific Button Styles */
+.operator {
+    color: var(--operator-color);
+    font-weight: 600;
+}
+
+.fn {
+    color: var(--accent-color);
+    font-weight: 600;
+}
+
+.equals {
+    grid-column: span 2;
+    background: var(--operator-color); /* Nice gradient or solid primary */
+    color: #000; /* Contrast text */
+    font-weight: 700;
+}
+
+.equals:hover {
+    background: #4de1ff; /* Lighter cyan */
+    box-shadow: 0 0 15px var(--operator-glow);
+}
+
+.zero-btn {
+    grid-column: span 2;
+}
+
+/* Responsive Scaling */
+@media (max-width: 400px) {
+    .calculator {
+        width: 90%;
+        margin: 0 auto;
+    }
+}
