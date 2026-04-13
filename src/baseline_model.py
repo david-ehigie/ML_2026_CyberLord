@@ -22,6 +22,15 @@ print("\nModel Accuracy:", accuracy)
 print("\nClassification Report:\n")
 print(classification_report(y_test, preds))
 
+from sklearn.inspection import permutation_importance
+
+print("\nPermutation Feature Importance:")
+
+result = permutation_importance(model, X_test, y_test, n_repeats=5, random_state=42)
+
+for i in result.importances_mean.argsort()[::-1][:10]:
+    print(f"Feature {i}: {result.importances_mean[i]:.4f}")
+
 ConfusionMatrixDisplay.from_predictions(y_test, preds)
 plt.title("Confusion Matrix - Random Forest")
 plt.show()

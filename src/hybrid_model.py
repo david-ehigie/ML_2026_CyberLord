@@ -1,103 +1,103 @@
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Dense, Embedding, Conv1D, GlobalMaxPooling1D, Concatenate, Dropout
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-from tensorflow.keras.layers import Input, Dense, Embedding, Conv1D, GlobalMaxPooling1D, Concatenate, Dropout
-from tensorflow.keras.models import Model
+from sklearn.metrics import classification_report, confusion_matrix
 
-print("Loading dataset...")
+# -------------------------------
+# LOAD DATA
+# -------------------------------
+print("Loading processed datasets...")
 
+X_train = pd.read_csv("data/processed/X_train.csv").values
+X_test = pd.read_csv("data/processed/X_test.csv").values
+
+y_train = pd.read_csv("data/processed/y_train.csv").values.ravel()
+y_test = pd.read_csv("data/processed/y_test.csv").values.ravel()
+
+# -------------------------------
+# LOAD URL DATA (for CNN)
+# -------------------------------
 df = pd.read_csv("data/raw/phishing.csv")
+urls = df.iloc[:, 0].astype(str)
 
-# URLs
-urls = df.iloc[:,0].astype(str)
+# Tokenization
+tokenizer = Tokenizer(num_words=5000)
+tokenizer.fit_on_texts(urls)
 
-# labels
-labels = df.iloc[:,-1]
-labels = labels.replace({"legitimate":0,"phishing":1})
-labels = labels.astype("float32")
+X_url = tokenizer.texts_to_sequences(urls)
+X_url = pad_sequences(X_url, maxlen=150)
 
-# engineered features
-X_features = pd.read_csv("data/processed/X_train.csv")
-X_features = pd.concat([X_features, pd.read_csv("data/processed/X_test.csv")])
+# Split URL same way
+X_url_train = X_url[:len(X_train)]
+X_url_test = X_url[len(X_train):]
 
-# select top 20 features
-selected_features = [
-85,86,56,83,20,
-82,58,50,46,74,
-57,25,0,62,1,
-44,49,67,39,78
-]
+# -------------------------------
+# MODEL ARCHITECTURE
+# -------------------------------
 
-X_features = X_features.iloc[:,selected_features]
+# URL input (CNN)
+url_input = Input(shape=(150,))
+embedding = Embedding(input_dim=5000, output_dim=64)(url_input)
+conv = Conv1D(128, 5, activation='relu')(embedding)
+pool = GlobalMaxPooling1D()(conv)
 
-# force numeric
-X_features = X_features.apply(pd.to_numeric, errors="coerce").fillna(0)
+# Feature input (RF features)
+feature_input = Input(shape=(X_train.shape[1],))
 
-# consistent split
-url_train, url_test, feat_train, feat_test, y_train, y_test = train_test_split(
-    urls,
-    X_features,
-    labels,
-    test_size=0.2,
-    random_state=42,
-    stratify=labels
-)
+# Combine both
+combined = Concatenate()([pool, feature_input])
 
-# tokenize URLs
-tokenizer = Tokenizer(char_level=True)
-tokenizer.fit_on_texts(url_train)
+dense = Dense(64, activation='relu')(combined)
+dropout = Dropout(0.5)(dense)
 
-train_seq = tokenizer.texts_to_sequences(url_train)
-test_seq = tokenizer.texts_to_sequences(url_test)
+# ✅ MULTI-CLASS OUTPUT
+output = Dense(3, activation='softmax')(dropout)
 
-max_length = 150
+model = Model(inputs=[url_input, feature_input], outputs=output)
 
-train_pad = pad_sequences(train_seq,maxlen=max_length)
-test_pad = pad_sequences(test_seq,maxlen=max_length)
-
-vocab_size = len(tokenizer.word_index)+1
-
-# CNN branch
-url_input = Input(shape=(max_length,))
-
-x = Embedding(vocab_size,64)(url_input)
-x = Conv1D(128,5,activation="relu")(x)
-x = GlobalMaxPooling1D()(x)
-
-# engineered feature branch
-feature_input = Input(shape=(20,))
-
-# merge
-combined = Concatenate()([x,feature_input])
-
-z = Dense(64,activation="relu")(combined)
-z = Dropout(0.3)(z)
-z = Dense(1,activation="sigmoid")(z)
-
-model = Model(inputs=[url_input,feature_input],outputs=z)
-
+# -------------------------------
+# COMPILE MODEL
+# -------------------------------
 model.compile(
-optimizer="adam",
-loss="binary_crossentropy",
-metrics=["accuracy"]
+    optimizer='adam',
+    loss='sparse_categorical_crossentropy',
+    metrics=['accuracy']
 )
 
 model.summary()
 
+# -------------------------------
+# TRAIN MODEL
+# -------------------------------
 print("Training hybrid model...")
 
 model.fit(
-[train_pad,feat_train],
-y_train,
-epochs=10,
-batch_size=64,
-validation_split=0.2
+    [X_url_train, X_train],
+    y_train,
+    epochs=10,
+    batch_size=32,
+    validation_data=([X_url_test, X_test], y_test)
 )
 
+# -------------------------------
+# EVALUATE MODEL
+# -------------------------------
 print("Evaluating hybrid model...")
 
-loss,acc = model.evaluate([test_pad,feat_test],y_test)
+loss, acc = model.evaluate([X_url_test, X_test], y_test)
+print("\nHybrid Model Accuracy:", acc)
 
-print("\nHybrid Model Accuracy:",acc)
+# Predictions
+y_pred = model.predict([X_url_test, X_test])
+y_pred_classes = np.argmax(y_pred, axis=1)
+
+# Classification Report
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred_classes))
+
+# Confusion Matrix
+print("\nConfusion Matrix:")
+print(confusion_matrix(y_test, y_pred_classes))
